@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>XML - IE vs Chrome</title>
+        <style>
+            table,
+            th,
+            td {
+                border: 1px solid black;
+                border-collapse: collapse;
+                padding: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="browser"></div>
+        <div id="xsd"></div>
+        <table id="result"></table>
+        <div id="xml"></div>
+        <script>
+            var xhr;
+            if (!window.document.documentMode) {
+                xhr = new XMLHttpRequest();
+                document.getElementById("browser").innerText = "Chrome";
+            } else {
+                xhr = new ActiveXObject("Microsoft.XMLHTTP");
+                document.getElementById("browser").innerText = "IE";
+            }
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == XMLHttpRequest.DONE) {
+                    console.log(xhr.responseText);
+                    if (window.document.documentMode) {
+                        var domDoc = new ActiveXObject("Microsoft.XMLDOM");
+                        domDoc.loadXML(xhr.responseText);
+
+                        funcIE(domDoc);
+                    }
+                    else {
+                        domDoc = new DOMParser().parseFromString(xhr.responseText, "text/xml");
+
+                        funcChrome(domDoc);
+                    }
+                }
+            }
+            xhr.open('GET', './WeatherForecast?random=' + Math.random(), true);
+            xhr.setRequestHeader("Accept", "application/xml")
+            xhr.send(null);
+
+            function funcIE(xmlDoc) {
+                var root = xmlDoc.documentElement;
+
+                var xsd = root.getAttribute("xmlns:xsd");
+                document.getElementById("xsd").innerText = xsd;
+
+                var node = root.selectSingleNode("/ArrayOfWeatherForecast/WeatherForecast/Summary");
+                node.text = node.text + "+";
+
+                var firstNode = root.selectSingleNode("WeatherForecast");
+                var newNode = firstNode.cloneNode(true);
+                root.appendChild(newNode);
+
+                var newElem = xmlDoc.createElement("WeatherForecast");
+                var tempElem = xmlDoc.createElement("Date");
+                tempElem.text = new Date().toISOString();
+                newElem.appendChild(tempElem);
+                tempElem = xmlDoc.createElement("TemperatureC");
+                tempElem.text = "32";
+                newElem.appendChild(tempElem);
+                tempElem = xmlDoc.createElement("Summary");
+                tempElem.text = "Hot";
+                newElem.appendChild(tempElem);
+                root.appendChild(newElem);
+
+                var n = root.selectSingleNode('WeatherForecast[2]');
+                root.removeChild(n);
+
+                var table = "<tr><th>Date</th><th>TemperatureC</th><th>Summary</th></tr>";
+                var nodes = root.selectNodes("WeatherForecast");
+                for (var i = 0; i < nodes.length; i++) {
+                    table += "<tr><td>" +
+                        nodes[i].selectNodes("Date")[0].childNodes[0].text +
+                        "</td><td>" +
+                        nodes[i].selectNodes("TemperatureC")[0].childNodes[0].nodeValue +
+                        "</td><td>" +
+                        nodes[i].selectNodes("Summary")[0].childNodes[0].nodeValue +
+                        "</td></tr>";
+                }
+                document.getElementById("result").innerHTML = table;
+                document.getElementById("xml").innerText = xmlDoc.xml;
+            }
+
+            function funcChrome(xmlDoc) {
+                var root = xmlDoc.documentElement;
+
+                var xsd = root.getAttribute("xmlns:xsd");
+                document.getElementById("xsd").innerText = xsd;
+
+                var node2 = funcSelectSingleNode(xmlDoc, "/ArrayOfWeatherForecast/WeatherForecast/Summary");
+                node2.childNodes[0].nodeValue = node2.childNodes[0].nodeValue + "+";
+
+                var firstNode = root.getElementsByTagName("WeatherForecast");
+                var newNode = firstNode[0].cloneNode(true);
+                root.appendChild(newNode);
+
+                var newElem = xmlDoc.createElement("WeatherForecast");
+                var tempElem = xmlDoc.createElement("Date");
+                tempElem.innerHTML = new Date().toISOString();
+                newElem.appendChild(tempElem);
+                tempElem = xmlDoc.createElement("TemperatureC");
+                tempElem.innerHTML = "32";
+                newElem.appendChild(tempElem);
+                tempElem = xmlDoc.createElement("Summary");
+                tempElem.innerHTML = "Hot";
+                newElem.appendChild(tempElem);
+                root.appendChild(newElem);
+
+                var n = root.getElementsByTagName('WeatherForecast')[2];
+                root.removeChild(n);
+
+                var table = "<tr><th>Date</th><th>TemperatureC</th><th>Summary</th></tr>";
+                var nodes = root.getElementsByTagName("WeatherForecast");
+                for (var i = 0; i < nodes.length; i++) {
+                    table += "<tr><td>" +
+                        nodes[i].getElementsByTagName("Date")[0].childNodes[0].nodeValue +
+                        "</td><td>" +
+                        nodes[i].getElementsByTagName("TemperatureC")[0].childNodes[0].nodeValue +
+                        "</td><td>" +
+                        nodes[i].getElementsByTagName("Summary")[0].childNodes[0].nodeValue +
+                        "</td></tr>";
+                }
+                document.getElementById("result").innerHTML = table;
+                document.getElementById("xml").innerText = xmlDoc.documentElement.outerHTML;
+            }
+
+            function funcSelectSingleNode(xmlDoc, elementPath) {   
+                if (document.implementation && document.implementation.createDocument) {         
+                    var nodes = document.evaluate(elementPath, xmlDoc, null, XPathResult.ANY_TYPE, null);
+                    return nodes.iterateNext();
+                }
+            }
+        </script>
+    </body>
+</html>
